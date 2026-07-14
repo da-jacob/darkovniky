@@ -8,7 +8,7 @@ import {
   Property,
 } from "@mikro-orm/decorators/legacy";
 
-@Entity()
+@Entity({ tableName: "user" })
 export class User {
   @PrimaryKey({ type: "uuid", defaultRaw: "gen_random_uuid()" })
   id!: string;
@@ -31,7 +31,7 @@ export enum ListType {
   PRIVATE_IDEAS = "private_ideas",
 }
 
-@Entity()
+@Entity({ tableName: "gift_list" })
 export class GiftList {
   @PrimaryKey({ type: "uuid", defaultRaw: "gen_random_uuid()" })
   id!: string;
@@ -61,7 +61,7 @@ export class GiftList {
   items = new Collection<GiftItem>(this);
 }
 
-@Entity()
+@Entity({ tableName: "gift_item" })
 export class GiftItem {
   @PrimaryKey({ type: "uuid", defaultRaw: "gen_random_uuid()" })
   id!: string;

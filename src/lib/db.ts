@@ -19,5 +19,5 @@ export async function withORM<T>(fn: () => Promise<T>): Promise<T> {
 export async function ensureSchema(): Promise<void> {
   const orm = await getORM();
   await orm.schema.ensureDatabase();
-  await orm.schema.update();
+  await orm.schema.update({ safe: true });
 }

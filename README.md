@@ -38,9 +38,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The database schema is created automatically on first request.
-
-### Optional: update schema manually
+Open [http://localhost:3000](http://localhost:3000). Run `npm run db:schema` before first use and after schema changes on deploy.
 
 ```bash
 npm run db:schema
