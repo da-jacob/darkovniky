@@ -6,21 +6,34 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:schema": "tsx scripts/update-schema.ts"
   },
   "dependencies": {
+    "@mikro-orm/core": "^7.1.5",
+    "@mikro-orm/decorators": "^7.1.5",
+    "@mikro-orm/migrations": "^7.1.5",
+    "@mikro-orm/postgresql": "^7.1.5",
+    "@mikro-orm/reflection": "^7.1.5",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
     "next": "16.2.10",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.0",
     "typescript": "^5"
   }
 }

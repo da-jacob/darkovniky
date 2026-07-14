@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GiftLists
 
-## Getting Started
+A mobile-first gift list app built with Next.js, Tailwind CSS, PostgreSQL, and MikroORM.
 
-First, run the development server:
+## Features
+
+- **Registration & login** — simple username/password auth (no email verification)
+- **Public wishlists** — each user gets a public list of gifts they want (name required, URL and price optional)
+- **Private gift idea lists** — plan surprises for others; only visible to the list owner
+- **Price filtering** — filter items by min/max price on any list view
+- **Modern UI** — responsive, mobile-first design
+
+## Getting started
+
+### 1. Start PostgreSQL
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run db:up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.example` to `.env.local` and adjust if needed:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.example .env.local
+```
 
-## Learn More
+Required variables:
 
-To learn more about Next.js, take a look at the following resources:
+- `DATABASE_URL` — PostgreSQL connection string
+- `AUTH_SECRET` — at least 32 characters (used for session tokens)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Install dependencies & run
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:3000](http://localhost:3000). The database schema is created automatically on first request.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Optional: update schema manually
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run db:schema
+```
+
+## Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Home — browse public wishlists |
+| `/register` | Create an account |
+| `/login` | Log in |
+| `/dashboard` | Manage your wishlist and private lists |
+| `/wishlist/[username]` | Public wishlist for a user |
+| `/dashboard/lists/[id]` | Private gift idea list (owner only) |
+
+## Tech stack
+
+- [Next.js 16](https://nextjs.org/)
+- [Tailwind CSS 4](https://tailwindcss.com/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [MikroORM](https://mikro-orm.io/)
+- [jose](https://github.com/panva/jose) (JWT sessions)
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) (password hashing)

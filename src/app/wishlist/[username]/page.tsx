@@ -1,0 +1,43 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Card } from "@/components/Card";
+import { FilterableGiftList } from "@/components/FilterableGiftList";
+import { getPublicWishlistByUsername } from "@/lib/actions/lists";
+import { t } from "@/lib/i18n";
+
+export default async function PublicWishlistPage({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  const { username } = await params;
+  const list = await getPublicWishlistByUsername(username);
+
+  if (!list) notFound();
+
+  const items = list.items.getItems().map((item) => ({
+    id: item.id,
+    name: item.name,
+    url: item.url,
+    price: item.price,
+  }));
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8 animate-fade-in sm:px-6 sm:py-10">
+      <div className="mb-8">
+        <p className="text-sm font-medium text-accent">{t.publicWishlist.label}</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{list.title}</h1>
+        <p className="mt-2 text-muted">
+          {t.publicWishlist.by}{" "}
+          <Link href={`/wishlist/${list.owner.username}`} className="font-medium text-foreground">
+            @{list.owner.username}
+          </Link>
+        </p>
+      </div>
+
+      <Card>
+        <FilterableGiftList items={items} emptyMessage={t.publicWishlist.empty} />
+      </Card>
+    </div>
+  );
+}
