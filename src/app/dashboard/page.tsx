@@ -4,6 +4,7 @@ import { AddItemForm, CreatePrivateListForm } from "@/components/ListForms";
 import { FilterableGiftList } from "@/components/FilterableGiftList";
 import { addItemAction, createPrivateListAction, getDashboardData } from "@/lib/actions/lists";
 import { t } from "@/lib/i18n";
+import { getRecipientLabel, getRecipientUsername } from "@/lib/recipient";
 
 export default async function DashboardPage() {
   const { session, wishlist, privateLists } = await getDashboardData();
@@ -87,7 +88,11 @@ export default async function DashboardPage() {
                     >
                       <p className="font-medium">{list.title}</p>
                       <p className="mt-0.5 text-sm text-muted">
-                        {t.dashboard.forRecipient(list.recipientName ?? "", list.items.length)}
+                        {t.dashboard.forRecipient(
+                          getRecipientLabel(list),
+                          list.items.length,
+                          getRecipientUsername(list),
+                        )}
                       </p>
                     </Link>
                   </li>

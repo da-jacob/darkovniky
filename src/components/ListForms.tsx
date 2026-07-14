@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
+import { UserSearchPicker, type SelectedUser } from "@/components/UserSearchPicker";
+import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { ActionResult } from "@/lib/utils";
 
@@ -66,6 +68,8 @@ export function AddItemForm({
   );
 }
 
+type RecipientMode = "registered" | "guest";
+
 export function CreatePrivateListForm({
   action,
 }: {
@@ -77,6 +81,8 @@ export function CreatePrivateListForm({
   const router = useRouter();
   const prevPending = useRef(false);
   const [state, formAction, pending] = useActionState(action, createListInitialState);
+  const [mode, setMode] = useState<RecipientMode>("registered");
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   useEffect(() => {
     if (prevPending.current && !pending && state.success && state.data?.id) {
@@ -93,18 +99,62 @@ export function CreatePrivateListForm({
         required
         placeholder={t.privateListForm.titlePlaceholder}
       />
-      <Input
-        label={t.privateListForm.recipient}
-        name="recipientName"
-        required
-        placeholder={t.privateListForm.recipientPlaceholder}
-      />
+
+      <div className="space-y-2">
+        <span className="block text-sm font-medium text-foreground">{t.privateListForm.recipient}</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("registered");
+              setSelectedUser(null);
+            }}
+            className={cn(
+              "flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition",
+              mode === "registered"
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-border text-muted hover:bg-stone-50",
+            )}
+          >
+            {t.privateListForm.modeRegistered}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("guest");
+              setSelectedUser(null);
+            }}
+            className={cn(
+              "flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition",
+              mode === "guest"
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-border text-muted hover:bg-stone-50",
+            )}
+          >
+            {t.privateListForm.modeGuest}
+          </button>
+        </div>
+      </div>
+
+      {mode === "registered" ? (
+        <UserSearchPicker selected={selectedUser} onSelect={setSelectedUser} />
+      ) : (
+        <Input
+          label={t.privateListForm.recipient}
+          name="recipientName"
+          required
+          placeholder={t.privateListForm.recipientPlaceholder}
+        />
+      )}
 
       {!state.success ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       ) : null}
 
-      <Button type="submit" disabled={pending}>
+      <Button
+        type="submit"
+        disabled={pending || (mode === "registered" && !selectedUser)}
+      >
         {pending ? t.privateListForm.creating : t.privateListForm.create}
       </Button>
     </form>

@@ -20,6 +20,26 @@ async function getOwnedList(listId: string, userId: string): Promise<GiftList | 
   return em.findOne(GiftList, { id: listId, owner: userId });
 }
 
+export async function searchUsersAction(query: string): Promise<Array<{ id: string; username: string }>> {
+  const session = await requireSession();
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+
+  return withORM(async () => {
+    const { getORM } = await import("@/lib/db");
+    const em = (await getORM()).em.fork();
+    const users = await em.find(
+      User,
+      {
+        username: { $ilike: `${q}%` },
+        id: { $ne: session.userId },
+      },
+      { limit: 8, orderBy: { username: "ASC" } },
+    );
+    return users.map((user) => ({ id: user.id, username: user.username }));
+  });
+}
+
 export async function createPrivateListAction(
   _prev: ActionResult<{ id: string }>,
   formData: FormData,
@@ -27,9 +47,13 @@ export async function createPrivateListAction(
   const session = await requireSession();
   const title = (formData.get("title") as string)?.trim();
   const recipientName = (formData.get("recipientName") as string)?.trim();
+  const recipientUserId = (formData.get("recipientUserId") as string)?.trim();
 
   if (!title) return fail(t.errors.titleRequired);
-  if (!recipientName) return fail(t.errors.recipientRequired);
+
+  if (!recipientUserId && !recipientName) {
+    return fail(t.errors.recipientOrUserRequired);
+  }
 
   return withORM(async () => {
     const { getORM } = await import("@/lib/db");
@@ -40,7 +64,19 @@ export async function createPrivateListAction(
     list.owner = owner;
     list.type = ListType.PRIVATE_IDEAS;
     list.title = title;
-    list.recipientName = recipientName;
+
+    if (recipientUserId) {
+      if (recipientUserId === session.userId) {
+        return fail(t.errors.cannotLinkSelf);
+      }
+      const recipientUser = await em.findOne(User, { id: recipientUserId });
+      if (!recipientUser) return fail(t.errors.userNotFound);
+      list.recipientUser = recipientUser;
+      list.recipientName = recipientName || recipientUser.username;
+    } else {
+      list.recipientName = recipientName;
+    }
+
     em.persist(list);
     await em.flush();
     return ok({ id: list.id });
@@ -196,7 +232,7 @@ export async function getDashboardData() {
     const privateLists = await em.find(
       GiftList,
       { owner: session.userId, type: ListType.PRIVATE_IDEAS },
-      { populate: ["items"], orderBy: { updatedAt: "DESC" } },
+      { populate: ["items", "recipientUser"], orderBy: { updatedAt: "DESC" } },
     );
 
     return { session, wishlist, privateLists };
@@ -213,7 +249,7 @@ export async function getPrivateList(listId: string) {
     const list = await em.findOne(
       GiftList,
       { id: listId, owner: session.userId, type: ListType.PRIVATE_IDEAS },
-      { populate: ["items"] },
+      { populate: ["items", "recipientUser"] },
     );
     if (!list) redirect("/dashboard");
     return { session, list };

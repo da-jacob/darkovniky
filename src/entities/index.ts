@@ -48,6 +48,9 @@ export class GiftList {
   @Property({ type: "string", nullable: true })
   recipientName?: string;
 
+  @ManyToOne(() => User, { nullable: true })
+  recipientUser?: User;
+
   @Property({ type: "date", defaultRaw: "now()" })
   createdAt!: Date;
 
