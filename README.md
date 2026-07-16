@@ -35,6 +35,7 @@ Required variables:
 Optional (AI suggestions):
 
 - `GEMINI_API_KEY` — Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+- `CRON_SECRET` — shared secret for the daily refresh endpoint (`/api/cron/ai-suggestions`)
 
 ### 3. Install dependencies & run
 
@@ -59,10 +60,25 @@ npm run db:schema
 | `/dashboard` | Manage your wishlist and private lists |
 | `/wishlist/[username]` | Public wishlist for a user (includes daily AI tips) |
 | `/dashboard/lists/[id]` | Private gift idea list (owner only) |
+| `/api/cron/ai-suggestions` | Daily refresh of AI tips (requires `CRON_SECRET`) |
 
 ## AI gift suggestions
 
-Suggestions are generated with Gemini from the person's public wishlist items and cached in the database. The wishlist page loads immediately with any cached tips; Gemini refresh runs in the browser after paint on the first visit each calendar day (`Europe/Prague`), or sooner if the wishlist items change.
+Suggestions are generated with Gemini from each person's public wishlist and cached in the database. The public wishlist page only reads the cache (no Gemini on page load).
+
+A daily job refreshes stale tips (`Europe/Prague` calendar day, or when wishlist items change). Gemini calls retry with exponential backoff until they succeed.
+
+Trigger manually:
+
+```bash
+# HTTP (Bearer or ?secret=)
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/ai-suggestions
+
+# Or CLI (useful for host crontab / Coolify / etc.)
+npm run ai:refresh
+```
+
+On Vercel, `vercel.json` schedules the endpoint daily at 05:00 UTC.
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org/)

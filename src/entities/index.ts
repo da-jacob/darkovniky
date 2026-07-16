@@ -102,6 +102,6 @@ export class AiSuggestionCache {
   @Property({ type: "string" })
   sourceFingerprint!: string;
 
-  @Property({ type: "date" })
+  @Property({ type: "datetime" })
   generatedAt!: Date;
 }

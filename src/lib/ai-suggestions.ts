@@ -11,7 +11,14 @@ import { generateGiftSuggestions, isGeminiConfigured } from "@/lib/gemini";
 
 const TIME_ZONE = "Europe/Prague";
 
-export function czechDateKey(date: Date = new Date()): string {
+function toValidDate(value: Date | string | number | null | undefined): Date | null {
+  if (value == null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function czechDateKey(value: Date | string | number = new Date()): string {
+  const date = toValidDate(value) ?? new Date();
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: TIME_ZONE,
     year: "numeric",
@@ -20,8 +27,13 @@ export function czechDateKey(date: Date = new Date()): string {
   }).format(date);
 }
 
-export function isSuggestionStale(generatedAt: Date, now: Date = new Date()): boolean {
-  return czechDateKey(generatedAt) !== czechDateKey(now);
+export function isSuggestionStale(
+  generatedAt: Date | string | number | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  const date = toValidDate(generatedAt);
+  if (!date) return true;
+  return czechDateKey(date) !== czechDateKey(now);
 }
 
 export function fingerprintWishlistItems(
@@ -37,13 +49,6 @@ export function fingerprintWishlistItems(
 export interface AiSuggestionsView {
   suggestions: AiSuggestionItem[];
   generatedAt: Date;
-}
-
-export interface CachedAiSuggestions {
-  suggestions: AiSuggestionItem[];
-  generatedAt: Date;
-  needsRefresh: boolean;
-  geminiConfigured: boolean;
 }
 
 async function loadWishlistItems(userId: string) {
@@ -88,15 +93,14 @@ async function upsertSuggestions(
   };
 }
 
-/** Fast DB-only read — never calls Gemini. */
+/** Fast DB-only read for the public wishlist page — never calls Gemini. */
 export async function getCachedAiSuggestionsForUser(
   userId: string,
-): Promise<CachedAiSuggestions | null> {
+): Promise<AiSuggestionsView | null> {
   return withORM(async () => {
     const { getORM } = await import("@/lib/db");
     const em = (await getORM()).em.fork();
     const items = await loadWishlistItems(userId);
-    const geminiConfigured = isGeminiConfigured();
 
     if (items.length === 0) {
       const existing = await em.findOne(AiSuggestionCache, { user: userId });
@@ -107,30 +111,23 @@ export async function getCachedAiSuggestionsForUser(
       return null;
     }
 
-    const sourceFingerprint = fingerprintWishlistItems(items);
     const cache = await em.findOne(AiSuggestionCache, { user: userId });
-    const hasSuggestions = Boolean(cache?.suggestions.length);
+    if (!cache?.suggestions.length) return null;
 
-    if (!hasSuggestions && !geminiConfigured) {
-      return null;
-    }
-
-    const needsRefresh =
-      !cache ||
-      !hasSuggestions ||
-      isSuggestionStale(cache.generatedAt) ||
-      cache.sourceFingerprint !== sourceFingerprint;
+    const generatedAt = toValidDate(cache.generatedAt);
+    if (!generatedAt) return null;
 
     return {
-      suggestions: cache?.suggestions ?? [],
-      generatedAt: cache?.generatedAt ?? new Date(0),
-      needsRefresh: needsRefresh && geminiConfigured,
-      geminiConfigured,
+      suggestions: cache.suggestions,
+      generatedAt,
     };
   });
 }
 
-/** Calls Gemini and updates the cache. Intended for client-triggered refresh. */
+/**
+ * Generates suggestions via Gemini (with internal retries until success)
+ * and stores them. Skips when today's cache is already fresh.
+ */
 export async function refreshAiSuggestionsForUser(
   userId: string,
 ): Promise<AiSuggestionsView | null> {
@@ -161,11 +158,60 @@ export async function refreshAiSuggestionsForUser(
     if (alreadyFresh) {
       return {
         suggestions: cache.suggestions,
-        generatedAt: cache.generatedAt,
+        generatedAt: toValidDate(cache.generatedAt) ?? new Date(),
       };
     }
 
     const suggestions = await generateGiftSuggestions(items);
     return upsertSuggestions(userId, suggestions, sourceFingerprint);
   });
+}
+
+export async function refreshStaleAiSuggestionsForAllUsers(): Promise<{
+  refreshed: number;
+  skipped: number;
+}> {
+  if (!isGeminiConfigured()) {
+    return { refreshed: 0, skipped: 0 };
+  }
+
+  const { getORM } = await import("@/lib/db");
+  const em = (await getORM()).em.fork();
+  const lists = await em.find(
+    GiftList,
+    { type: ListType.PUBLIC_WISHLIST },
+    { populate: ["owner", "items"] },
+  );
+
+  let refreshed = 0;
+  let skipped = 0;
+
+  for (const list of lists) {
+    const items = list.items.getItems();
+    if (items.length === 0) {
+      skipped += 1;
+      continue;
+    }
+
+    const sourceFingerprint = fingerprintWishlistItems(
+      items.map((item) => ({ name: item.name, price: item.price })),
+    );
+    const cache = await em.findOne(AiSuggestionCache, { user: list.owner.id });
+    const needsRefresh =
+      !cache ||
+      cache.suggestions.length === 0 ||
+      isSuggestionStale(cache.generatedAt) ||
+      cache.sourceFingerprint !== sourceFingerprint;
+
+    if (!needsRefresh) {
+      skipped += 1;
+      continue;
+    }
+
+    // Retries until Gemini succeeds (see generateGiftSuggestions).
+    await refreshAiSuggestionsForUser(list.owner.id);
+    refreshed += 1;
+  }
+
+  return { refreshed, skipped };
 }

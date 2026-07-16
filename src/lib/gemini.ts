@@ -2,7 +2,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { AiSuggestionItem } from "@/entities";
 
 const SUGGESTION_COUNT = 5;
-const MODEL = "gemini-3.5-flash";
+const MODEL = "gemini-3.1-flash-lite";
+const INITIAL_RETRY_DELAY_MS = 1_000;
+const MAX_RETRY_DELAY_MS = 60_000;
 
 function getClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -14,7 +16,11 @@ export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
 
-export async function generateGiftSuggestions(
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function generateGiftSuggestionsOnce(
   wishlistItems: Array<{ name: string; price?: string | null }>,
 ): Promise<AiSuggestionItem[]> {
   const ai = getClient();
@@ -126,4 +132,28 @@ ${itemLines}`;
   }
 
   return suggestions;
+}
+
+/** Retries with exponential backoff until Gemini returns usable suggestions. */
+export async function generateGiftSuggestions(
+  wishlistItems: Array<{ name: string; price?: string | null }>,
+): Promise<AiSuggestionItem[]> {
+  let attempt = 0;
+
+  while (true) {
+    attempt += 1;
+    try {
+      return await generateGiftSuggestionsOnce(wishlistItems);
+    } catch (error) {
+      const delay = Math.min(
+        INITIAL_RETRY_DELAY_MS * 2 ** Math.min(attempt - 1, 6),
+        MAX_RETRY_DELAY_MS,
+      );
+      console.warn(
+        `Gemini gift suggestions failed (attempt ${attempt}), retrying in ${delay}ms`,
+        error,
+      );
+      await sleep(delay);
+    }
+  }
 }

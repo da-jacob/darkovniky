@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AiSuggestionsPanel } from "@/components/AiSuggestions";
+import { AiSuggestions } from "@/components/AiSuggestions";
 import { Card } from "@/components/Card";
 import { FilterableGiftList } from "@/components/FilterableGiftList";
 import { getPublicWishlistByUsername } from "@/lib/actions/lists";
@@ -24,7 +24,7 @@ export default async function PublicWishlistPage({
     price: item.price,
   }));
 
-  const aiCache =
+  const aiSuggestions =
     items.length > 0 ? await getCachedAiSuggestionsForUser(list.owner.id) : null;
 
   return (
@@ -45,14 +45,10 @@ export default async function PublicWishlistPage({
           <FilterableGiftList items={items} emptyMessage={t.publicWishlist.empty} />
         </Card>
 
-        {aiCache ? (
-          <AiSuggestionsPanel
-            username={list.owner.username}
-            initialSuggestions={aiCache.suggestions}
-            initialGeneratedAt={
-              aiCache.suggestions.length > 0 ? aiCache.generatedAt.toISOString() : null
-            }
-            needsRefresh={aiCache.needsRefresh}
+        {aiSuggestions ? (
+          <AiSuggestions
+            suggestions={aiSuggestions.suggestions}
+            generatedAt={aiSuggestions.generatedAt}
           />
         ) : null}
       </div>
