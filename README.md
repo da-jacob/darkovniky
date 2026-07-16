@@ -7,6 +7,7 @@ A mobile-first gift list app built with Next.js, Tailwind CSS, PostgreSQL, and M
 - **Registration & login** — simple username/password auth (no email verification)
 - **Public wishlists** — each user gets a public list of gifts they want (name required, URL and price optional)
 - **Private gift idea lists** — plan surprises for others; only visible to the list owner
+- **AI gift suggestions** — daily Gemini tips based on each person's wishlist (Czech)
 - **Price filtering** — filter items by min/max price on any list view
 - **Modern UI** — responsive, mobile-first design
 
@@ -31,6 +32,10 @@ Required variables:
 - `DATABASE_URL` — PostgreSQL connection string
 - `AUTH_SECRET` — at least 32 characters (used for session tokens)
 
+Optional (AI suggestions):
+
+- `GEMINI_API_KEY` — Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+
 ### 3. Install dependencies & run
 
 ```bash
@@ -52,14 +57,18 @@ npm run db:schema
 | `/register` | Create an account |
 | `/login` | Log in |
 | `/dashboard` | Manage your wishlist and private lists |
-| `/wishlist/[username]` | Public wishlist for a user |
+| `/wishlist/[username]` | Public wishlist for a user (includes daily AI tips) |
 | `/dashboard/lists/[id]` | Private gift idea list (owner only) |
 
+## AI gift suggestions
+
+Suggestions are generated with Gemini from the person's public wishlist items and cached in the database. They refresh on the first visit to that public wishlist each calendar day (`Europe/Prague`), or sooner if the wishlist items change.
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org/)
 - [Tailwind CSS 4](https://tailwindcss.com/)
 - [PostgreSQL](https://www.postgresql.org/)
 - [MikroORM](https://mikro-orm.io/)
+- [Google Gen AI / Gemini](https://ai.google.dev/)
 - [jose](https://github.com/panva/jose) (JWT sessions)
 - [bcryptjs](https://github.com/dcodeIO/bcrypt.js) (password hashing)

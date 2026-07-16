@@ -81,3 +81,27 @@ export class GiftItem {
   @Property({ type: "date", defaultRaw: "now()" })
   createdAt!: Date;
 }
+
+export interface AiSuggestionItem {
+  name: string;
+  reason: string;
+  approximatePriceCzk?: number | null;
+}
+
+@Entity({ tableName: "ai_suggestion_cache" })
+export class AiSuggestionCache {
+  @PrimaryKey({ type: "uuid", defaultRaw: "gen_random_uuid()" })
+  id!: string;
+
+  @ManyToOne(() => User, { unique: true, deleteRule: "cascade" })
+  user!: User;
+
+  @Property({ type: "json" })
+  suggestions!: AiSuggestionItem[];
+
+  @Property({ type: "string" })
+  sourceFingerprint!: string;
+
+  @Property({ type: "date" })
+  generatedAt!: Date;
+}

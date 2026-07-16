@@ -12,6 +12,7 @@
     "db:schema": "tsx scripts/update-schema.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.12.0",
     "@mikro-orm/core": "^7.1.5",
     "@mikro-orm/decorators": "^7.1.5",
     "@mikro-orm/migrations": "^7.1.5",

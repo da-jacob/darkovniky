@@ -26,9 +26,9 @@ export function formatShowingCount(shown: number, total: number): string {
 export const t = {
   appName: "Dárkovníky",
   meta: {
-    title: "Dárkovníky — Sdílejte seznamy přání a nápady na dárky",
+    title: "Dárkovníky — Sdílejte seznamy přání a AI nápady na dárky",
     description:
-      "Vytvořte veřejný seznam dárků, které chcete, a soukromé seznamy nápadů pro ostatní.",
+      "Vytvořte veřejný seznam dárků, které chcete, soukromé seznamy nápadů pro ostatní a nechte si poradit AI tipy na dárky.",
   },
   nav: {
     dashboard: "Přehled",
@@ -38,16 +38,23 @@ export const t = {
     signUp: "Registrace",
   },
   home: {
-    tagline: "Seznamy přání jednoduše",
-    headline: "Sdílejte, co chcete. Nápady na dárky si nechte pro sebe.",
+    tagline: "Seznamy přání s AI",
+    headline: "Sdílejte, co chcete. AI vám poradí s dárky.",
     description:
-      "Vytvořte veřejný seznam přání pro přátele a rodinu a soukromé seznamy pro plánování překvapení.",
+      "Vytvořte veřejný seznam přání pro přátele a rodinu, soukromé seznamy pro plánování překvapení a získejte denní AI tipy na dárky.",
     goToDashboard: "Přejít na přehled",
     getStarted: "Začít zdarma",
     publicWishlists: "Veřejné seznamy přání",
     publicWishlistsHint: "Prohlížejte, co si ostatní přejí",
     noWishlists: "Zatím žádné veřejné seznamy. Buďte první a",
     signUpLink: "zaregistrujte se",
+  },
+  aiSuggestions: {
+    label: "AI tipy",
+    title: "Nápady na dárky od AI",
+    description:
+      "Denně obnovované tipy podle položek na tomto seznamu přání — inspirace, co ještě koupit.",
+    updatedOn: (date: string) => `Aktualizováno ${date}`,
   },
   auth: {
     welcomeBack: "Vítejte zpět",

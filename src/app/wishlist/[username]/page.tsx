@@ -1,9 +1,21 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { AiSuggestions, AiSuggestionsSkeleton } from "@/components/AiSuggestions";
 import { Card } from "@/components/Card";
 import { FilterableGiftList } from "@/components/FilterableGiftList";
+import { getAiSuggestionsForUser } from "@/lib/ai-suggestions";
 import { getPublicWishlistByUsername } from "@/lib/actions/lists";
 import { t } from "@/lib/i18n";
+
+async function AiSuggestionsSection({ userId }: { userId: string }) {
+  const result = await getAiSuggestionsForUser(userId);
+  if (!result) return null;
+
+  return (
+    <AiSuggestions suggestions={result.suggestions} generatedAt={result.generatedAt} />
+  );
+}
 
 export default async function PublicWishlistPage({
   params,
@@ -35,9 +47,17 @@ export default async function PublicWishlistPage({
         </p>
       </div>
 
-      <Card>
-        <FilterableGiftList items={items} emptyMessage={t.publicWishlist.empty} />
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <FilterableGiftList items={items} emptyMessage={t.publicWishlist.empty} />
+        </Card>
+
+        {items.length > 0 ? (
+          <Suspense fallback={<AiSuggestionsSkeleton />}>
+            <AiSuggestionsSection userId={list.owner.id} />
+          </Suspense>
+        ) : null}
+      </div>
     </div>
   );
 }
