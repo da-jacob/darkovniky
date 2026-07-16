@@ -6,6 +6,9 @@ const MODEL = "gemini-3.1-flash-lite";
 const INITIAL_RETRY_DELAY_MS = 1_000;
 const MAX_RETRY_DELAY_MS = 60_000;
 
+const SHOPS = ["heureka", "alza", "datart"] as const;
+type Shop = (typeof SHOPS)[number];
+
 function getClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
@@ -18,6 +21,28 @@ export function isGeminiConfigured(): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseShop(value: string | null | undefined): Shop {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized && (SHOPS as readonly string[]).includes(normalized)) {
+    return normalized as Shop;
+  }
+  return "heureka";
+}
+
+/** Build a working search URL — never use LLM-invented product IDs. */
+export function buildShopSearchUrl(shop: Shop, productName: string): string {
+  const query = encodeURIComponent(productName);
+  switch (shop) {
+    case "alza":
+      return `https://www.alza.cz/search.htm?exps=${query}`;
+    case "datart":
+      return `https://www.datart.cz/vyhledavani?q=${query}`;
+    case "heureka":
+    default:
+      return `https://www.heureka.cz/?h%5Bfraze%5D=${query}`;
+  }
 }
 
 async function generateGiftSuggestionsOnce(
@@ -48,7 +73,9 @@ Pravidla:
 - Piš výhradně česky.
 - Nenavrhuj položky, které už na seznamu jsou (ani drobné varianty stejného produktu).
 - Nápady ať ladí se stylem, zájmy a cenovou hladinou seznamu.
-- U každého nápadu uveď krátké zdůvodnění (1–2 věty) a orientační cenu v Kč.
+- U každého nápadu uveď krátké zdůvodnění (1–2 věty), orientační cenu v Kč a preferovaný obchod (shop).
+- shop musí být jedno z: heureka, alza, datart — podle toho, kde se dárek typicky shání.
+- NEVYMÝŠLEJ žádné URL ani produktová ID — odkazy se sestaví automaticky.
 - Navrhuj konkrétní, koupitelné dárky vhodné pro český trh.
 
 Seznam přání:
@@ -79,9 +106,14 @@ ${itemLines}`;
                   type: Type.NUMBER,
                   description: "Orientační cena v Kč",
                 },
+                shop: {
+                  type: Type.STRING,
+                  description: "Preferovaný obchod: heureka, alza nebo datart",
+                  enum: [...SHOPS],
+                },
               },
-              propertyOrdering: ["name", "reason", "approximatePriceCzk"],
-              required: ["name", "reason"],
+              propertyOrdering: ["name", "reason", "approximatePriceCzk", "shop"],
+              required: ["name", "reason", "shop"],
             },
           },
         },
@@ -101,6 +133,7 @@ ${itemLines}`;
       name?: string;
       reason?: string;
       approximatePriceCzk?: number | null;
+      shop?: string | null;
     }>;
   };
 
@@ -118,10 +151,13 @@ ${itemLines}`;
         ? Math.round(item.approximatePriceCzk)
         : null;
 
+    const shop = parseShop(item.shop);
+
     suggestions.push({
       name,
       reason,
       approximatePriceCzk: price,
+      url: buildShopSearchUrl(shop, name),
     });
 
     if (suggestions.length >= SUGGESTION_COUNT) break;

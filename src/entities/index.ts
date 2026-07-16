@@ -86,6 +86,7 @@ export interface AiSuggestionItem {
   name: string;
   reason: string;
   approximatePriceCzk?: number | null;
+  url?: string | null;
 }
 
 @Entity({ tableName: "ai_suggestion_cache" })

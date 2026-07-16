@@ -43,6 +43,16 @@ export function AiSuggestions({
                 {price ? <span className="text-sm font-medium text-muted">{price}</span> : null}
               </div>
               <p className="mt-1 text-sm leading-relaxed text-muted">{suggestion.reason}</p>
+              {suggestion.url ? (
+                <a
+                  href={suggestion.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-sm font-medium text-accent underline-offset-2 hover:underline"
+                >
+                  {t.items.viewLink}
+                </a>
+              ) : null}
             </li>
           );
         })}
