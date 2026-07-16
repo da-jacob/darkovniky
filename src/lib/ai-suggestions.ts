@@ -39,6 +39,13 @@ export interface AiSuggestionsView {
   generatedAt: Date;
 }
 
+export interface CachedAiSuggestions {
+  suggestions: AiSuggestionItem[];
+  generatedAt: Date;
+  needsRefresh: boolean;
+  geminiConfigured: boolean;
+}
+
 async function loadWishlistItems(userId: string) {
   const { getORM } = await import("@/lib/db");
   const em = (await getORM()).em.fork();
@@ -81,9 +88,54 @@ async function upsertSuggestions(
   };
 }
 
-export async function getAiSuggestionsForUser(
+/** Fast DB-only read — never calls Gemini. */
+export async function getCachedAiSuggestionsForUser(
+  userId: string,
+): Promise<CachedAiSuggestions | null> {
+  return withORM(async () => {
+    const { getORM } = await import("@/lib/db");
+    const em = (await getORM()).em.fork();
+    const items = await loadWishlistItems(userId);
+    const geminiConfigured = isGeminiConfigured();
+
+    if (items.length === 0) {
+      const existing = await em.findOne(AiSuggestionCache, { user: userId });
+      if (existing) {
+        em.remove(existing);
+        await em.flush();
+      }
+      return null;
+    }
+
+    const sourceFingerprint = fingerprintWishlistItems(items);
+    const cache = await em.findOne(AiSuggestionCache, { user: userId });
+    const hasSuggestions = Boolean(cache?.suggestions.length);
+
+    if (!hasSuggestions && !geminiConfigured) {
+      return null;
+    }
+
+    const needsRefresh =
+      !cache ||
+      !hasSuggestions ||
+      isSuggestionStale(cache.generatedAt) ||
+      cache.sourceFingerprint !== sourceFingerprint;
+
+    return {
+      suggestions: cache?.suggestions ?? [],
+      generatedAt: cache?.generatedAt ?? new Date(0),
+      needsRefresh: needsRefresh && geminiConfigured,
+      geminiConfigured,
+    };
+  });
+}
+
+/** Calls Gemini and updates the cache. Intended for client-triggered refresh. */
+export async function refreshAiSuggestionsForUser(
   userId: string,
 ): Promise<AiSuggestionsView | null> {
+  if (!isGeminiConfigured()) return null;
+
   return withORM(async () => {
     const { getORM } = await import("@/lib/db");
     const em = (await getORM()).em.fork();
@@ -100,42 +152,20 @@ export async function getAiSuggestionsForUser(
 
     const sourceFingerprint = fingerprintWishlistItems(items);
     const cache = await em.findOne(AiSuggestionCache, { user: userId });
-
-    const fresh =
+    const alreadyFresh =
       cache &&
+      cache.suggestions.length > 0 &&
       !isSuggestionStale(cache.generatedAt) &&
-      cache.sourceFingerprint === sourceFingerprint &&
-      cache.suggestions.length > 0;
+      cache.sourceFingerprint === sourceFingerprint;
 
-    if (fresh) {
+    if (alreadyFresh) {
       return {
         suggestions: cache.suggestions,
         generatedAt: cache.generatedAt,
       };
     }
 
-    if (!isGeminiConfigured()) {
-      if (cache?.suggestions.length) {
-        return {
-          suggestions: cache.suggestions,
-          generatedAt: cache.generatedAt,
-        };
-      }
-      return null;
-    }
-
-    try {
-      const suggestions = await generateGiftSuggestions(items);
-      return await upsertSuggestions(userId, suggestions, sourceFingerprint);
-    } catch (error) {
-      console.error("Failed to refresh AI gift suggestions", error);
-      if (cache?.suggestions.length) {
-        return {
-          suggestions: cache.suggestions,
-          generatedAt: cache.generatedAt,
-        };
-      }
-      return null;
-    }
+    const suggestions = await generateGiftSuggestions(items);
+    return upsertSuggestions(userId, suggestions, sourceFingerprint);
   });
 }

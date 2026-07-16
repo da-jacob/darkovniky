@@ -1,21 +1,11 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { AiSuggestions, AiSuggestionsSkeleton } from "@/components/AiSuggestions";
+import { AiSuggestionsPanel } from "@/components/AiSuggestions";
 import { Card } from "@/components/Card";
 import { FilterableGiftList } from "@/components/FilterableGiftList";
-import { getAiSuggestionsForUser } from "@/lib/ai-suggestions";
 import { getPublicWishlistByUsername } from "@/lib/actions/lists";
+import { getCachedAiSuggestionsForUser } from "@/lib/ai-suggestions";
 import { t } from "@/lib/i18n";
-
-async function AiSuggestionsSection({ userId }: { userId: string }) {
-  const result = await getAiSuggestionsForUser(userId);
-  if (!result) return null;
-
-  return (
-    <AiSuggestions suggestions={result.suggestions} generatedAt={result.generatedAt} />
-  );
-}
 
 export default async function PublicWishlistPage({
   params,
@@ -33,6 +23,9 @@ export default async function PublicWishlistPage({
     url: item.url,
     price: item.price,
   }));
+
+  const aiCache =
+    items.length > 0 ? await getCachedAiSuggestionsForUser(list.owner.id) : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 animate-fade-in sm:px-6 sm:py-10">
@@ -52,10 +45,15 @@ export default async function PublicWishlistPage({
           <FilterableGiftList items={items} emptyMessage={t.publicWishlist.empty} />
         </Card>
 
-        {items.length > 0 ? (
-          <Suspense fallback={<AiSuggestionsSkeleton />}>
-            <AiSuggestionsSection userId={list.owner.id} />
-          </Suspense>
+        {aiCache ? (
+          <AiSuggestionsPanel
+            username={list.owner.username}
+            initialSuggestions={aiCache.suggestions}
+            initialGeneratedAt={
+              aiCache.suggestions.length > 0 ? aiCache.generatedAt.toISOString() : null
+            }
+            needsRefresh={aiCache.needsRefresh}
+          />
         ) : null}
       </div>
     </div>

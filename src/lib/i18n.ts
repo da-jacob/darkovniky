@@ -55,6 +55,10 @@ export const t = {
     description:
       "Denně obnovované tipy podle položek na tomto seznamu přání — inspirace, co ještě koupit.",
     updatedOn: (date: string) => `Aktualizováno ${date}`,
+    loading: "Generuji AI tipy… chvilku strpení.",
+    refreshing: "Obnovuji tipy…",
+    error: "AI tipy se teď nepodařilo načíst. Zkuste to znovu.",
+    retry: "Zkusit znovu",
   },
   auth: {
     welcomeBack: "Vítejte zpět",

@@ -62,7 +62,7 @@ npm run db:schema
 
 ## AI gift suggestions
 
-Suggestions are generated with Gemini from the person's public wishlist items and cached in the database. They refresh on the first visit to that public wishlist each calendar day (`Europe/Prague`), or sooner if the wishlist items change.
+Suggestions are generated with Gemini from the person's public wishlist items and cached in the database. The wishlist page loads immediately with any cached tips; Gemini refresh runs in the browser after paint on the first visit each calendar day (`Europe/Prague`), or sooner if the wishlist items change.
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org/)
